@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>오늘의 급식 별점</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #fff3e6, #ffe5d9);
+      font-family: 'Nanum Gothic', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .card {
+      background-color: white;
+      padding: 2rem;
+      border-radius: 1.5rem;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+    h1 {
+      margin-top: 0;
+    }
+    #date {
+      font-size: 0.95rem;
+      color: #888;
+      margin-bottom: 1rem;
+    }
+    .stars {
+      font-size: 2.2rem;
+      cursor: pointer;
+      margin: 1rem 0;
+    }
+    .star {
+      transition: transform 0.2s ease;
+    }
+    .star:hover {
+      transform: scale(1.2);
+    }
+    .selected {
+      color: #ffc107;
+    }
+    .average {
+      margin-top: 1rem;
+      font-size: 1.1rem;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>오늘의 급식 어땠나요?</h1>
+    <p id="date"></p>
+    <div class="stars" id="star-container">★★★★★</div>
+    <div class="average">평균 별점: <span id="avg">계산 중...</span></div>
+  </div>
+
+  <script>
+    // 🔗 Firebase 설정 (여기에 너의 프로젝트 config를 넣어)
+    const firebaseConfig = {
+      apiKey: "AIzaSyBCrk1M5gVP43dm6BKYF0aDr5DmOpZifXI",
+      authDomain: "foodstaring.firebaseapp.com",
+      projectId: "foodstaring",
+      storageBucket: "foodstaring.firebasestorage.app",
+      messagingSenderId: "665305280636",
+      appId: "1:665305280636:web:e1c6dd1f06c03963c599f9",
+      measurementId: "G-NBRCYSJDY6"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // 오늘 날짜 키
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date').textContent = `📅 ${today}`;
+
+    const starEl = document.getElementById("star-container");
+    const avgEl = document.getElementById("avg");
+
+    let selected = 0;
+
+    // 별점 클릭 시 저장
+    starEl.addEventListener("click", async (e) => {
+    if (e.target.classList.contains("star")) {
+      const index = parseInt(e.target.getAttribute("data-index"));
+      selected = index + 1;
+      updateStars(selected);
+
+      await db.collection("ratings").doc(today).collection("scores").add({
+        score: selected,
+        timestamp: new Date()
+      });
+
+      alert(`${selected}점을 주셨습니다!`);
+      calculateAverage();
+    }
+  });
+
+    function updateStars(score) {
+      const stars = "★★★★★".split('');
+      starEl.innerHTML = stars
+        .map((s, i) => `<span class="star ${i < score ? 'selected' : ''}">★</span>`)
+        .join('');
+    }
+
+    // 평균 계산
+    async function calculateAverage() {
+      const snapshot = await db.collection("ratings").doc(today).collection("scores").get();
+      const scores = snapshot.docs.map(doc => doc.data().score);
+      if (scores.length > 0) {
+        const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2);
+        avgEl.textContent = `${avg} (${scores.length}명 참여)`;
+      } else {
+        avgEl.textContent = '아직 없음';
+      }
+    }
+
+    calculateAverage();
+    updateStars(0);
+  </script>
+</body>
+</html>
