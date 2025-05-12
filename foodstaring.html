@@ -86,40 +86,44 @@
     let selected = 0;
 
     // 별점 클릭 시 저장
-    starEl.addEventListener("click", async (e) => {
+// 클릭 이벤트에서 별점 업데이트
+  starEl.addEventListener("click", async (e) => {
     if (e.target.classList.contains("star")) {
       const index = parseInt(e.target.getAttribute("data-index"));
-      selected = index + 1;
+      selected = index + 1;  // 클릭된 별의 번호(1~5) 계산
       updateStars(selected);
-
+  
+      // Firestore에 점수 저장
       await db.collection("ratings").doc(today).collection("scores").add({
         score: selected,
         timestamp: new Date()
       });
-
+  
       alert(`${selected}점을 주셨습니다!`);
       calculateAverage();
     }
   });
-
-    function updateStars(score) {
-      const stars = "★★★★★".split('');
-      starEl.innerHTML = stars
-        .map((s, i) => `<span class="star ${i < score ? 'selected' : ''}">★</span>`)
-        .join('');
+  
+  // 별점 UI 업데이트
+  function updateStars(score) {
+    const stars = "★★★★★".split('');
+    starEl.innerHTML = stars
+      .map((s, i) => `<span class="star ${i < score ? 'selected' : ''}" data-index="${i}">★</span>`)
+      .join('');
+  }
+  
+  // 평균 계산
+  async function calculateAverage() {
+    const snapshot = await db.collection("ratings").doc(today).collection("scores").get();
+    const scores = snapshot.docs.map(doc => doc.data().score);
+    if (scores.length > 0) {
+      const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2);
+      avgEl.textContent = `${avg} (${scores.length}명 참여)`;
+    } else {
+      avgEl.textContent = '아직 없음';
     }
+  }
 
-    // 평균 계산
-    async function calculateAverage() {
-      const snapshot = await db.collection("ratings").doc(today).collection("scores").get();
-      const scores = snapshot.docs.map(doc => doc.data().score);
-      if (scores.length > 0) {
-        const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2);
-        avgEl.textContent = `${avg} (${scores.length}명 참여)`;
-      } else {
-        avgEl.textContent = '아직 없음';
-      }
-    }
 
     calculateAverage();
     updateStars(0);
